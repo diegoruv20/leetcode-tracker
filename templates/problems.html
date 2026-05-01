@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Problems — LeetCode Tracker{% endblock %}
+{% block content %}
+<div class="problems-page">
+  <h1>📋 Problems</h1>
+
+  <div class="filters">
+    <select id="filter-category"><option value="">All Categories</option></select>
+    <select id="filter-difficulty">
+      <option value="">All Difficulties</option>
+      <option value="Easy">Easy</option>
+      <option value="Medium">Medium</option>
+      <option value="Hard">Hard</option>
+    </select>
+    <select id="filter-status">
+      <option value="">All Statuses</option>
+      <option value="not_attempted">Not Attempted</option>
+      <option value="learning">Learning</option>
+      <option value="mastered">Mastered</option>
+    </select>
+    <select id="filter-box">
+      <option value="">All Boxes</option>
+      <option value="1">Box 1 (Daily)</option>
+      <option value="2">Box 2 (2 days)</option>
+      <option value="3">Box 3 (4 days)</option>
+      <option value="4">Box 4 (8 days)</option>
+      <option value="5">Box 5 (16 days)</option>
+    </select>
+  </div>
+
+  <table class="data-table" id="problems-table">
+    <thead>
+      <tr>
+        <th>Problem</th>
+        <th>Difficulty</th>
+        <th>Topics</th>
+        <th>Box</th>
+        <th>Status</th>
+        <th>Next Review</th>
+        <th>Attempts</th>
+      </tr>
+    </thead>
+    <tbody id="problems-body">
+      <tr><td colspan="7">Loading...</td></tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allProblems = [];
+
+async function loadProblems() {
+  const params = new URLSearchParams();
+  const diff = document.getElementById('filter-difficulty').value;
+  const status = document.getElementById('filter-status').value;
+  const box = document.getElementById('filter-box').value;
+  if (diff) params.set('difficulty', diff);
+  if (status) params.set('status', status);
+  if (box) params.set('box', box);
+
+  const res = await fetch('/api/problems?' + params.toString());
+  allProblems = await res.json();
+  renderProblems(allProblems);
+}
+
+function renderProblems(problems) {
+  const tbody = document.getElementById('problems-body');
+  if (problems.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No problems match filters.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = problems.map(p => {
+    const statusIcon = p.status === 'mastered' ? '🏆' : p.status === 'learning' ? '📖' : '⬜';
+    const boxClass = `box-${p.leitner_box}`;
+    return `<tr>
+      <td><a href="/problems/${p.id}">${p.name}</a></td>
+      <td><span class="badge diff-${p.difficulty.toLowerCase()}">${p.difficulty}</span></td>
+      <td>${p.topics.map(t => `<span class="badge topic-badge">${t.name}</span>`).join(' ')}</td>
+      <td><span class="badge box-badge ${boxClass}">Box ${p.leitner_box}</span></td>
+      <td>${statusIcon} ${p.status.replace('_', ' ')}</td>
+      <td>${p.next_review_date || '—'}</td>
+      <td>${p.attempt_count}</td>
+    </tr>`;
+  }).join('');
+}
+
+document.querySelectorAll('.filters select').forEach(el => {
+  el.addEventListener('change', loadProblems);
+});
+
+loadProblems();
+</script>
+{% endblock %}

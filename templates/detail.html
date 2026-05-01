@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Problem Detail — LeetCode Tracker{% endblock %}
+{% block content %}
+<div class="detail-page">
+  <div id="problem-header">Loading...</div>
+
+  <section class="section">
+    <h2>📈 Confidence Trend</h2>
+    <canvas id="trend-chart" height="200"></canvas>
+  </section>
+
+  <section class="section">
+    <h2>📝 Attempt History</h2>
+    <div id="attempts-list">Loading...</div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const problemId = {{ problem_id }};
+
+async function loadDetail() {
+  const res = await fetch(`/api/problems/${problemId}`);
+  const p = await res.json();
+
+  // Header
+  document.getElementById('problem-header').innerHTML = `
+    <div class="detail-header">
+      <h1>${p.name}</h1>
+      <div class="detail-meta">
+        <span class="badge diff-${p.difficulty.toLowerCase()}">${p.difficulty}</span>
+        <span class="badge box-badge box-${p.leitner_box}">Box ${p.leitner_box}</span>
+        <span class="badge">${p.status.replace('_', ' ')}</span>
+        ${p.topics.map(t => `<span class="badge topic-badge">${t.name}</span>`).join(' ')}
+        <a href="${p.url}" target="_blank" class="badge link-badge">Open on LeetCode ↗</a>
+      </div>
+      <p>Next review: <strong>${p.next_review_date || 'Now'}</strong> · ${p.attempt_count} attempt(s)</p>
+      <a href="/log?problem=${p.id}" class="btn btn-primary">Log Attempt</a>
+    </div>
+  `;
+
+  // Trend chart
+  const attempts = [...p.attempts].reverse();
+  if (attempts.length > 0) {
+    const ctx = document.getElementById('trend-chart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: attempts.map((a, i) => `#${i + 1}`),
+        datasets: [
+          {
+            label: 'Confidence',
+            data: attempts.map(a => a.confidence),
+            borderColor: '#6366f1',
+            backgroundColor: '#6366f133',
+            fill: true,
+            tension: 0.3,
+          },
+          {
+            label: 'AI Score',
+            data: attempts.map(a => a.ai_score ? a.ai_score / 2 : null),
+            borderColor: '#f59e0b',
+            borderDash: [5, 5],
+            tension: 0.3,
+          }
+        ]
+      },
+      options: {
+        scales: {
+          y: { min: 0, max: 5, title: { display: true, text: 'Score' } }
+        },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              afterLabel: ctx => {
+                const a = attempts[ctx.dataIndex];
+                return `${a.passed ? 'Passed' : 'Failed'} · ${a.time_taken_minutes || '?'} min`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Attempts list
+  const attEl = document.getElementById('attempts-list');
+  if (p.attempts.length === 0) {
+    attEl.innerHTML = '<p class="empty-state">No attempts yet. <a href="/log?problem=' + p.id + '">Log your first attempt!</a></p>';
+  } else {
+    attEl.innerHTML = p.attempts.map((a, i) => `
+      <div class="attempt-card ${a.passed ? 'passed' : 'failed'}">
+        <div class="attempt-header">
+          <span class="attempt-num">#${p.attempts.length - i}</span>
+          <span>${a.passed ? '✅ Passed' : '❌ Failed'}</span>
+          <span>⭐ ${a.confidence || '?'}/5</span>
+          ${a.ai_score ? `<span>🤖 ${a.ai_score}/10</span>` : ''}
+          ${a.complexity_score ? `<span>🧠 Complexity: ${a.complexity_score}/5</span>` : ''}
+          <span>⏱️ ${a.time_taken_minutes || '?'} min</span>
+          <span class="attempt-date">${new Date(a.created_at).toLocaleDateString()}</span>
+        </div>
+        ${a.ai_feedback ? `<div class="attempt-feedback"><strong>AI Feedback:</strong> ${a.ai_feedback}</div>` : ''}
+        ${a.solution_code ? `<details class="attempt-solution"><summary>View Solution</summary><pre><code>${escapeHtml(a.solution_code)}</code></pre></details>` : ''}
+        ${a.notes ? `<div class="attempt-notes"><em>${a.notes}</em></div>` : ''}
+      </div>
+    `).join('');
+  }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+loadDetail();
+</script>
+{% endblock %}

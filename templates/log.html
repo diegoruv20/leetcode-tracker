@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Log Attempt — LeetCode Tracker{% endblock %}
+{% block content %}
+<div class="log-page">
+  <h1>✏️ Log Attempt</h1>
+
+  <form id="attempt-form" class="form">
+    <div class="form-group">
+      <label for="problem-select">Problem</label>
+      <select id="problem-select" required>
+        <option value="">Select a problem...</option>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="passed">Result</label>
+        <select id="passed" required>
+          <option value="true">✅ Passed</option>
+          <option value="false">❌ Failed</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="time">Time (minutes)</label>
+        <input type="number" id="time" min="1" max="180" placeholder="e.g. 25">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Confidence</label>
+      <div class="confidence-selector" id="confidence-selector">
+        <button type="button" data-val="1" class="conf-btn">1<br><small>Struggled</small></button>
+        <button type="button" data-val="2" class="conf-btn">2<br><small>Shaky</small></button>
+        <button type="button" data-val="3" class="conf-btn">3<br><small>Okay</small></button>
+        <button type="button" data-val="4" class="conf-btn">4<br><small>Good</small></button>
+        <button type="button" data-val="5" class="conf-btn">5<br><small>Nailed it</small></button>
+      </div>
+      <input type="hidden" id="confidence" value="">
+    </div>
+
+    <div class="form-group">
+      <label for="solution">Solution Code</label>
+      <textarea id="solution" rows="12" placeholder="Paste your Python solution here..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="notes">Notes (optional)</label>
+      <textarea id="notes" rows="3" placeholder="What did you learn? What was tricky?"></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-large">Log Attempt</button>
+  </form>
+
+  <div id="result-message" class="result-message" style="display:none;"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Load problems into select
+async function loadProblems() {
+  const res = await fetch('/api/problems');
+  const problems = await res.json();
+  const select = document.getElementById('problem-select');
+  problems.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = `${p.name} [${p.difficulty}] — Box ${p.leitner_box}`;
+    select.appendChild(opt);
+  });
+
+  // Pre-select from URL param
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('problem')) {
+    select.value = params.get('problem');
+  }
+}
+
+// Confidence buttons
+let selectedConfidence = null;
+document.querySelectorAll('.conf-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.conf-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedConfidence = parseInt(btn.dataset.val);
+    document.getElementById('confidence').value = selectedConfidence;
+  });
+});
+
+// Form submit
+document.getElementById('attempt-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const problemId = document.getElementById('problem-select').value;
+  if (!problemId) { alert('Please select a problem.'); return; }
+  if (!selectedConfidence) { alert('Please rate your confidence.'); return; }
+
+  const body = {
+    problem_id: parseInt(problemId),
+    passed: document.getElementById('passed').value === 'true',
+    time_taken_minutes: parseInt(document.getElementById('time').value) || null,
+    confidence: selectedConfidence,
+    solution_code: document.getElementById('solution').value || null,
+    notes: document.getElementById('notes').value || null,
+  };
+
+  const res = await fetch('/api/attempts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json();
+  const msgEl = document.getElementById('result-message');
+  msgEl.style.display = 'block';
+
+  if (res.ok) {
+    const boxMsg = data.leitner_update;
+    msgEl.className = 'result-message success';
+    msgEl.innerHTML = `
+      <h3>✅ Attempt logged!</h3>
+      <p>Moved to <strong>Box ${boxMsg.new_box}</strong> — next review: <strong>${boxMsg.next_review}</strong></p>
+      <a href="/problems/${problemId}" class="btn">View Problem →</a>
+    `;
+  } else {
+    msgEl.className = 'result-message error';
+    msgEl.textContent = 'Error logging attempt. Please try again.';
+  }
+});
+
+loadProblems();
+</script>
+{% endblock %}

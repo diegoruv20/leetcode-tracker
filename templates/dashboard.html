@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — LeetCode Tracker{% endblock %}
+{% block content %}
+<div class="dashboard">
+  <h1>📊 Dashboard</h1>
+
+  <!-- Stats Cards -->
+  <div class="stats-grid" id="stats-cards">
+    <div class="stat-card due"><div class="stat-number" id="due-count">-</div><div class="stat-label">Due Today</div></div>
+    <div class="stat-card"><div class="stat-number" id="attempted-count">-</div><div class="stat-label">Attempted</div></div>
+    <div class="stat-card mastered"><div class="stat-number" id="mastered-count">-</div><div class="stat-label">Mastered</div></div>
+    <div class="stat-card"><div class="stat-number" id="pass-rate">-</div><div class="stat-label">Pass Rate</div></div>
+    <div class="stat-card"><div class="stat-number" id="avg-confidence">-</div><div class="stat-label">Avg Confidence</div></div>
+    <div class="stat-card"><div class="stat-number" id="avg-ai-score">-</div><div class="stat-label">Avg AI Score</div></div>
+    <div class="stat-card"><div class="stat-number" id="avg-complexity">-</div><div class="stat-label">Complexity Accuracy</div></div>
+  </div>
+
+  <!-- Due Today Queue -->
+  <section class="section">
+    <h2>🔥 Due Today</h2>
+    <div id="due-queue" class="due-queue">Loading...</div>
+  </section>
+
+  <!-- Charts Row -->
+  <div class="charts-row">
+    <section class="section chart-section">
+      <h2>📦 Leitner Box Distribution</h2>
+      <canvas id="box-chart"></canvas>
+    </section>
+    <section class="section chart-section">
+      <h2>🎯 Confidence vs Reality</h2>
+      <canvas id="calibration-chart"></canvas>
+    </section>
+  </div>
+
+  <!-- Topic Heatmap -->
+  <section class="section">
+    <h2>🗺️ Topic Heatmap</h2>
+    <div id="topic-heatmap" class="topic-heatmap">Loading...</div>
+  </section>
+
+  <!-- Recent Activity -->
+  <section class="section">
+    <h2>🕐 Recent Activity</h2>
+    <div id="recent-activity">Loading...</div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadDashboard() {
+  const [statsRes, dueRes, topicsRes] = await Promise.all([
+    fetch('/api/stats'), fetch('/api/due'), fetch('/api/topics')
+  ]);
+  const stats = await statsRes.json();
+  const due = await dueRes.json();
+  const topics = await topicsRes.json();
+
+  // Stats cards
+  document.getElementById('due-count').textContent = stats.due_today;
+  document.getElementById('attempted-count').textContent = `${stats.attempted}/${stats.total_problems}`;
+  document.getElementById('mastered-count').textContent = stats.mastered;
+  document.getElementById('pass-rate').textContent = `${stats.pass_rate}%`;
+  document.getElementById('avg-confidence').textContent = `${stats.avg_confidence}/5`;
+  document.getElementById('avg-ai-score').textContent = stats.avg_ai_score > 0 ? `${stats.avg_ai_score}/10` : '—';
+  document.getElementById('avg-complexity').textContent = stats.avg_complexity_score > 0 ? `${stats.avg_complexity_score}/5` : '—';
+
+  // Due today queue
+  const dueEl = document.getElementById('due-queue');
+  if (due.length === 0) {
+    dueEl.innerHTML = '<p class="empty-state">🎉 All caught up! No problems due today.</p>';
+  } else {
+    dueEl.innerHTML = due.map(p => `
+      <a href="/problems/${p.id}" class="due-card box-${p.leitner_box}">
+        <span class="due-name">${p.name}</span>
+        <span class="due-meta">
+          <span class="badge diff-${p.difficulty.toLowerCase()}">${p.difficulty}</span>
+          <span class="badge box-badge">Box ${p.leitner_box}</span>
+        </span>
+      </a>
+    `).join('');
+  }
+
+  // Box distribution chart
+  const boxCtx = document.getElementById('box-chart').getContext('2d');
+  new Chart(boxCtx, {
+    type: 'bar',
+    data: {
+      labels: ['Box 1\n(Daily)', 'Box 2\n(2 days)', 'Box 3\n(4 days)', 'Box 4\n(8 days)', 'Box 5\n(16 days)'],
+      datasets: [{
+        data: [1,2,3,4,5].map(b => stats.box_distribution[b] || 0),
+        backgroundColor: ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4'],
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+  });
+
+  // Calibration chart
+  if (stats.calibration.length > 0) {
+    const calCtx = document.getElementById('calibration-chart').getContext('2d');
+    new Chart(calCtx, {
+      type: 'scatter',
+      data: {
+        datasets: [{
+          label: 'Topics',
+          data: stats.calibration.map(c => ({
+            x: c.avg_confidence,
+            y: c.pass_rate,
+            label: c.topic
+          })),
+          backgroundColor: stats.calibration.map(c => {
+            const gap = Math.abs(c.avg_confidence * 20 - c.pass_rate);
+            return gap > 30 ? '#ef4444' : gap > 15 ? '#eab308' : '#22c55e';
+          }),
+          pointRadius: 8,
+        }]
+      },
+      options: {
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: ctx => `${ctx.raw.label}: conf ${ctx.raw.x}, pass ${ctx.raw.y}%`
+            }
+          },
+          legend: { display: false }
+        },
+        scales: {
+          x: { title: { display: true, text: 'Avg Confidence (1-5)' }, min: 0, max: 5 },
+          y: { title: { display: true, text: 'Pass Rate %' }, min: 0, max: 100 }
+        }
+      }
+    });
+  }
+
+  // Topic heatmap
+  const heatEl = document.getElementById('topic-heatmap');
+  if (topics.length === 0) {
+    heatEl.innerHTML = '<p class="empty-state">No data yet. Start solving problems!</p>';
+  } else {
+    heatEl.innerHTML = topics.map(t => {
+      const pct = t.pass_rate;
+      const color = pct >= 80 ? 'heatmap-great' : pct >= 60 ? 'heatmap-good' : pct >= 40 ? 'heatmap-ok' : t.attempt_count > 0 ? 'heatmap-weak' : 'heatmap-none';
+      return `<div class="heatmap-cell ${color}" title="${t.topic.name}: ${pct}% pass rate, ${t.attempt_count} attempts">
+        <div class="heatmap-name">${t.topic.name}</div>
+        <div class="heatmap-stat">${t.attempt_count > 0 ? pct + '%' : '—'}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Recent activity
+  const recentEl = document.getElementById('recent-activity');
+  if (stats.recent_activity.length === 0) {
+    recentEl.innerHTML = '<p class="empty-state">No attempts yet. <a href="/log">Log your first attempt!</a></p>';
+  } else {
+    recentEl.innerHTML = '<table class="data-table"><thead><tr><th>Problem</th><th>Result</th><th>Confidence</th><th>AI Score</th><th>Complexity</th><th>Time</th><th>Date</th></tr></thead><tbody>' +
+      stats.recent_activity.map(a => `<tr>
+        <td><a href="/problems/${a.problem_id}">${a.problem_name}</a></td>
+        <td>${a.passed ? '✅ Pass' : '❌ Fail'}</td>
+        <td>${a.confidence ? '⭐'.repeat(a.confidence) : '—'}</td>
+        <td>${a.ai_score ? a.ai_score + '/10' : '—'}</td>
+        <td>${a.complexity_score ? a.complexity_score + '/5' : '—'}</td>
+        <td>${a.time_taken_minutes ? a.time_taken_minutes + ' min' : '—'}</td>
+        <td>${new Date(a.created_at).toLocaleDateString()}</td>
+      </tr>`).join('') +
+      '</tbody></table>';
+  }
+}
+
+loadDashboard();
+</script>
+{% endblock %}
