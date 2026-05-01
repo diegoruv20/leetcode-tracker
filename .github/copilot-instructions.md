@@ -64,4 +64,18 @@ Each attempt tracks multiple metrics — some user-reported, some AI-provided:
 - `ai_score` (1–10), `ai_feedback` (text) — AI analysis of solution quality
 - `complexity_score` (1–5) — how accurately the user identified time/space complexity
 
-The primary workflow is: user solves a problem → pastes solution in Copilot CLI → Copilot analyzes it, quizzes on complexity, then POSTs everything to `/api/attempts`.
+## Copilot CLI Workflow for Logging Attempts
+
+When the user pastes a LeetCode solution and says they completed a problem, follow this workflow:
+
+1. **Identify the problem** from the solution code or user's message. Match it to a problem in the tracker.
+2. **Analyze the solution** — assess correctness, time/space complexity, code quality, edge cases, and patterns used.
+3. **Quiz the user on complexity** — ask "What's the time and space complexity of your solution?" BEFORE revealing your analysis. Score their answer 1–5 for `complexity_score`.
+4. **Score the solution** 1–10 for `ai_score` with detailed `ai_feedback` covering: correctness, complexity analysis, code quality, pattern recognition, and improvement tips vs. previous attempts.
+5. **Ask the user** for: confidence (1–5), time taken (minutes), and whether it passed all test cases.
+6. **POST to the tracker API** at `http://127.0.0.1:5000/api/attempts` with all fields. Use PowerShell `Invoke-RestMethod`. Example:
+   ```powershell
+   $body = @{ problem_id = ID; passed = $true; time_taken_minutes = N; confidence = N; solution_code = "..."; ai_score = N; ai_feedback = "..."; complexity_score = N; notes = "..." } | ConvertTo-Json
+   Invoke-RestMethod -Uri http://127.0.0.1:5000/api/attempts -Method POST -Body $body -ContentType "application/json"
+   ```
+7. **Report the result** — show the Leitner box update and next review date from the API response.
