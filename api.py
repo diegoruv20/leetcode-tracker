@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from models import db, Problem, Attempt, Category, Topic
-from datetime import date
+from datetime import date, timedelta
 from sqlalchemy import func, case
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
@@ -186,3 +186,28 @@ def topic_analytics():
         })
 
     return jsonify(sorted(result, key=lambda x: x["pass_rate"]))
+
+
+@api_bp.route("/calendar")
+def calendar():
+    """Daily attempt counts for the last 365 days."""
+    start = date.today() - timedelta(days=364)
+    rows = (
+        db.session.query(
+            func.date(Attempt.created_at).label("day"),
+            func.count().label("count"),
+        )
+        .filter(Attempt.created_at >= start.isoformat())
+        .group_by(func.date(Attempt.created_at))
+        .all()
+    )
+    counts = {str(r.day): r.count for r in rows}
+
+    # Fill in all 365 days
+    result = []
+    for i in range(365):
+        d = start + timedelta(days=i)
+        ds = d.isoformat()
+        result.append({"date": ds, "count": counts.get(ds, 0)})
+
+    return jsonify(result)

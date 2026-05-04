@@ -15,6 +15,24 @@
     <div class="stat-card"><div class="stat-number" id="avg-complexity">-</div><div class="stat-label">Complexity Accuracy</div></div>
   </div>
 
+  <!-- Calendar Heatmap -->
+  <section class="section">
+    <h2>📅 Activity</h2>
+    <div class="calendar-container">
+      <div class="calendar-months" id="calendar-months"></div>
+      <div class="calendar-grid" id="calendar-grid"></div>
+      <div class="calendar-legend">
+        <span>Less</span>
+        <div class="calendar-legend-cell" style="background:var(--surface-hover)"></div>
+        <div class="calendar-legend-cell" style="background:#0e4429"></div>
+        <div class="calendar-legend-cell" style="background:#006d32"></div>
+        <div class="calendar-legend-cell" style="background:#26a641"></div>
+        <div class="calendar-legend-cell" style="background:#39d353"></div>
+        <span>More</span>
+      </div>
+    </div>
+  </section>
+
   <!-- Due Today Queue -->
   <section class="section">
     <h2>🔥 Due Today</h2>
@@ -50,12 +68,60 @@
 {% block scripts %}
 <script>
 async function loadDashboard() {
-  const [statsRes, dueRes, topicsRes] = await Promise.all([
-    fetch('/api/stats'), fetch('/api/due'), fetch('/api/topics')
+  const [statsRes, dueRes, topicsRes, calRes] = await Promise.all([
+    fetch('/api/stats'), fetch('/api/due'), fetch('/api/topics'), fetch('/api/calendar')
   ]);
   const stats = await statsRes.json();
   const due = await dueRes.json();
   const topics = await topicsRes.json();
+  const calendar = await calRes.json();
+
+  // Calendar heatmap
+  const grid = document.getElementById('calendar-grid');
+  const monthsEl = document.getElementById('calendar-months');
+  const calMap = {};
+  calendar.forEach(d => calMap[d.date] = d.count);
+
+  // Start from 365 days ago, aligned to Monday
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - 364);
+  // Align to previous Monday
+  while (startDate.getDay() !== 1) startDate.setDate(startDate.getDate() - 1);
+
+  const months = [];
+  let lastMonth = -1;
+  const today = new Date();
+
+  for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
+    const ds = d.toISOString().slice(0, 10);
+    const count = calMap[ds] || 0;
+    const level = count === 0 ? '0' : count === 1 ? '1' : count <= 3 ? '2' : 'high';
+    const finalLevel = count >= 4 ? 'max' : level;
+
+    const cell = document.createElement('div');
+    cell.className = 'calendar-cell';
+    cell.setAttribute('data-count', count <= 3 ? count : '');
+    if (count >= 4) cell.setAttribute('data-level', 'max');
+    else if (count >= 2) cell.setAttribute('data-level', 'high');
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'calendar-tooltip';
+    tooltip.textContent = `${count} problem${count !== 1 ? 's' : ''} on ${ds}`;
+    cell.appendChild(tooltip);
+    grid.appendChild(cell);
+
+    // Track months for labels
+    if (d.getMonth() !== lastMonth) {
+      months.push({ name: d.toLocaleString('default', { month: 'short' }), week: Math.floor((d - startDate) / (7 * 86400000)) });
+      lastMonth = d.getMonth();
+    }
+  }
+
+  months.forEach(m => {
+    const span = document.createElement('span');
+    span.textContent = m.name;
+    monthsEl.appendChild(span);
+  });
 
   // Stats cards
   document.getElementById('due-count').textContent = stats.due_today;
