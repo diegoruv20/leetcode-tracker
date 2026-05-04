@@ -124,8 +124,9 @@ h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.03em; margin-botto
 }
 
 /* === Charts Row === */
-.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-.chart-section canvas { max-height: 300px; }
+.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: stretch; }
+.chart-section { display: flex; flex-direction: column; }
+.chart-section canvas { flex: 1; max-height: 250px; min-height: 250px; }
 
 /* === Due Queue === */
 .due-queue { display: flex; flex-direction: column; gap: .5rem; }
