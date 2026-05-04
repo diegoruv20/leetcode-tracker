@@ -148,6 +148,24 @@ h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.03em; margin-botto
 .due-card.box-5 { border-left-color: var(--box5); }
 .due-meta { display: flex; gap: .5rem; }
 
+/* Due hidden/toggle */
+.due-hidden { display: flex; flex-direction: column; gap: .5rem; }
+.btn-toggle {
+  background: none;
+  border: 1px solid var(--glass-border);
+  color: var(--text-dim);
+  padding: .5rem 1rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: .8rem;
+  font-weight: 500;
+  margin-top: .5rem;
+  transition: all .2s;
+  font-family: 'Inter', system-ui, sans-serif;
+  width: 100%;
+}
+.btn-toggle:hover { color: var(--text); border-color: rgba(255,255,255,0.15); background: var(--glass-hover); }
+
 /* === Badges === */
 .badge {
   display: inline-flex;

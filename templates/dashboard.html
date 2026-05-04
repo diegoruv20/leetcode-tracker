@@ -132,12 +132,13 @@ async function loadDashboard() {
   document.getElementById('avg-ai-score').textContent = stats.avg_ai_score > 0 ? `${stats.avg_ai_score}/10` : '—';
   document.getElementById('avg-complexity').textContent = stats.avg_complexity_score > 0 ? `${stats.avg_complexity_score}/5` : '—';
 
-  // Due today queue
+  // Due today queue — show top 5, collapsible
   const dueEl = document.getElementById('due-queue');
   if (due.length === 0) {
     dueEl.innerHTML = '<p class="empty-state">🎉 All caught up! No problems due today.</p>';
   } else {
-    dueEl.innerHTML = due.map(p => `
+    const SHOW_COUNT = 5;
+    const cards = due.map(p => `
       <a href="/problems/${p.id}" class="due-card box-${p.leitner_box}">
         <span class="due-name">${p.name}</span>
         <span class="due-meta">
@@ -145,7 +146,14 @@ async function loadDashboard() {
           <span class="badge box-badge">Box ${p.leitner_box}</span>
         </span>
       </a>
-    `).join('');
+    `);
+    const visible = cards.slice(0, SHOW_COUNT).join('');
+    const hidden = cards.slice(SHOW_COUNT).join('');
+    const toggle = due.length > SHOW_COUNT
+      ? `<div id="due-hidden" class="due-hidden" style="display:none">${hidden}</div>
+         <button class="btn-toggle" onclick="const el=document.getElementById('due-hidden');const shown=el.style.display!=='none';el.style.display=shown?'none':'flex';this.textContent=shown?'Show all ${due.length} problems ▾':'Show less ▴'">Show all ${due.length} problems ▾</button>`
+      : '';
+    dueEl.innerHTML = visible + toggle;
   }
 
   // Box distribution chart
