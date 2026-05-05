@@ -114,9 +114,11 @@ async function loadDashboard() {
     }
   }
 
+  const colWidth = 16; // 13px cell + 3px gap
   months.forEach(m => {
     const span = document.createElement('span');
     span.textContent = m.name;
+    span.style.left = (m.week * colWidth) + 'px';
     monthsEl.appendChild(span);
   });
 

@@ -394,13 +394,16 @@ select:focus, input:focus, textarea:focus { outline: 2px solid var(--accent); bo
 }
 .calendar-cell:hover .calendar-tooltip { display: block; }
 .calendar-months {
-  display: flex;
+  position: relative;
   font-size: .7rem;
   color: var(--text-dim);
   margin-bottom: .25rem;
-  padding-left: 0;
+  height: 1.2em;
 }
-.calendar-months span { flex: 1; min-width: 56px; }
+.calendar-months span {
+  position: absolute;
+  top: 0;
+}
 .calendar-legend {
   display: flex;
   align-items: center;
