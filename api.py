@@ -190,8 +190,21 @@ def topic_analytics():
 
 @api_bp.route("/calendar")
 def calendar():
-    """Daily attempt counts for the last 365 days."""
-    start = date.today() - timedelta(days=364)
+    """Daily attempt counts. Minimum 3 months lookback, expands to cover all history."""
+    today = date.today()
+    min_start = today - timedelta(days=90)
+
+    earliest_attempt = db.session.query(func.min(func.date(Attempt.created_at))).scalar()
+    if earliest_attempt:
+        earliest = date.fromisoformat(str(earliest_attempt))
+        start = min(earliest, min_start)
+    else:
+        start = min_start
+
+    # Align start to previous Monday for clean grid
+    while start.weekday() != 0:
+        start -= timedelta(days=1)
+
     rows = (
         db.session.query(
             func.date(Attempt.created_at).label("day"),
@@ -203,11 +216,11 @@ def calendar():
     )
     counts = {str(r.day): r.count for r in rows}
 
-    # Fill in all 365 days
     result = []
-    for i in range(365):
-        d = start + timedelta(days=i)
+    d = start
+    while d <= today:
         ds = d.isoformat()
         result.append({"date": ds, "count": counts.get(ds, 0)})
+        d += timedelta(days=1)
 
     return jsonify(result)

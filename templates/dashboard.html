@@ -82,11 +82,8 @@ async function loadDashboard() {
   const calMap = {};
   calendar.forEach(d => calMap[d.date] = d.count);
 
-  // Start from 365 days ago, aligned to Monday
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - 364);
-  // Align to previous Monday
-  while (startDate.getDay() !== 1) startDate.setDate(startDate.getDate() - 1);
+  // Derive date range from API data (already Monday-aligned)
+  const startDate = new Date(calendar[0].date + 'T00:00:00');
 
   const months = [];
   let lastMonth = -1;
