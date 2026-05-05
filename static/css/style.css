@@ -129,6 +129,25 @@ h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.03em; margin-botto
 .chart-section canvas { flex: 1; max-height: 250px; min-height: 250px; }
 
 /* === Due Queue === */
+.due-filters {
+  display: flex;
+  gap: .5rem;
+  margin-bottom: .75rem;
+}
+.btn-filter {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  color: var(--text-dim);
+  padding: .35rem .85rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: .75rem;
+  font-weight: 500;
+  transition: all .2s;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+.btn-filter:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+.btn-filter.active { background: var(--accent); color: white; border-color: var(--accent); }
 .due-queue { display: flex; flex-direction: column; gap: .5rem; }
 .due-card {
   display: flex;
@@ -189,6 +208,8 @@ h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.03em; margin-botto
 .box-badge.box-3 { background: rgba(234,179,8,.12); color: var(--box3); }
 .box-badge.box-4 { background: rgba(52,211,153,.12); color: var(--box4); }
 .box-badge.box-5 { background: rgba(6,182,212,.12); color: var(--box5); }
+.badge-new { background: rgba(124,110,240,.15); color: var(--accent-hover); }
+.badge-review { background: rgba(52,211,153,.12); color: var(--success); }
 
 /* === Data Table === */
 .data-table {

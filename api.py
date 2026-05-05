@@ -43,7 +43,20 @@ def due_today():
         .order_by(Problem.leitner_box.asc(), func.random())
         .all()
     )
-    return jsonify([p.to_dict() for p in problems])
+
+    type_filter = request.args.get("type")
+    if type_filter == "new":
+        problems = [p for p in problems if not p.attempts]
+    elif type_filter == "review":
+        problems = [p for p in problems if p.attempts]
+
+    result = []
+    for p in problems:
+        d = p.to_dict()
+        d["review_type"] = "new" if not p.attempts else "review"
+        result.append(d)
+
+    return jsonify(result)
 
 
 @api_bp.route("/attempts", methods=["POST"])
