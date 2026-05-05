@@ -79,3 +79,4 @@ When the user pastes a LeetCode solution and says they completed a problem, foll
    Invoke-RestMethod -Uri http://127.0.0.1:5000/api/attempts -Method POST -Body $body -ContentType "application/json"
    ```
 7. **Report the result** — show the Leitner box update and next review date from the API response.
+8. **Show the optimal solution** — present the best/cleanest solution for the problem with a brief explanation of what makes it better (e.g., fewer passes, in-place tricks, cleaner edge case handling). Then give specific, actionable tips on what the user should do differently next time based on comparing their solution to the optimal one.
