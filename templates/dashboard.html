@@ -20,7 +20,12 @@
     <h2>📅 Activity</h2>
     <div class="calendar-container">
       <div class="calendar-months" id="calendar-months"></div>
-      <div class="calendar-grid" id="calendar-grid"></div>
+      <div class="calendar-wrapper">
+        <div class="calendar-day-labels">
+          <span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span><span></span>
+        </div>
+        <div class="calendar-grid" id="calendar-grid"></div>
+      </div>
       <div class="calendar-legend">
         <span>Less</span>
         <div class="calendar-legend-cell" style="background:rgba(255,255,255,0.03)"></div>
@@ -114,11 +119,12 @@ async function loadDashboard() {
     }
   }
 
-  const colWidth = 16; // 13px cell + 3px gap
+  const colWidth = 22; // 18px cell + 4px gap
+  const dayLabelsWidth = 34; // day-labels column width + margin
   months.forEach(m => {
     const span = document.createElement('span');
     span.textContent = m.name;
-    span.style.left = (m.week * colWidth) + 'px';
+    span.style.left = (dayLabelsWidth + m.week * colWidth) + 'px';
     monthsEl.appendChild(span);
   });
 
